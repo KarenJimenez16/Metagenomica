@@ -2,7 +2,7 @@
 ### Karen Jiménez, 2020
 #### Introducción a la bioinformática e investigación reproducible para análisis genómicos
 
-Dentro de este repositorio se encuentran los archivos solicitados para tarea 8.1. Dentro de la carpeta *bin* se encuentra el script de bash con el que se realizó el análisis de los datos. En la carpeta *data* se encuentra el archivo `.biom` que se obtuvo como resultado final del análisis. 
+Dentro de este repositorio se encuentran los archivos solicitados para tarea 8.1. Dentro de la carpeta **bin** se encuentra el script de bash con el que se realizó el análisis de los datos. En la carpeta **data** se encuentra el archivo `.biom` que se obtuvo como resultado final del análisis. 
 
 ##### Breve explicación de los resultados obtenidos
 
