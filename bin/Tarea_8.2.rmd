@@ -1,0 +1,134 @@
+---
+title: "Tarea_8.2: Metagenómica"
+author: "Karen Yoselin Jiménez Cedillo"
+date: "7/5/2020"
+output: html_document
+---
+# Análisis de datos de Illumina MiSeq desde amptk 
+
+Este script de R busca utilizar un archivo biom obtenido deAMPtk para procesar datos de metagenómica con ITS2 de hongos generados por secuenciación por Illumina MiSeq
+
+#### Contexto
+Los datos a analizar son 24 muestras de suelo rizosférico recolectados en sitios de bosque nativo (N) y mixto (M) de Quercus (Q) y de Juniperus (J).
+
+### Métodos y resultados
+
+Para la realización de este análisis es necesario tener un archivo `biom` en la carpeta *data* y correr este script desde la carpeta *bin*. Se debe marcar el directorio de trabaja en la ubicación de este script. 
+
+#### Activación de librerías necesarias para el análisis 
+
+```{r eval=TRUE}
+library(phyloseq)
+library(vegan)
+library(ggplot2)
+```
+
+#### Importación de los datos
+
+```{r eval=TRUE}
+suelo <- import_biom("../data/taxonomy.biom")
+```
+
+#### Creación de nuevo archivo phylosep
+Para conocer la abundancia de OTU's de cada familia por tratamiento y hospedero y no la abundancia de lecturas por OTU's, se realizó la creación de un nuevo proyecto phyloseq. En este nuevo proyecto, se modificó la tabla de OTU's original por una tabla binaria de presencia/ausencia con el programa de R `vegan`.  
+
+```{r eval=TRUE}
+otu_table<-as.data.frame(otu_table(suelo)) #Extracción de tabla de OTU´s original
+PA <- decostand(otu_table, method="pa") #Cambio a tabla binaria de ausencia/presencia
+otu_table_bin <-phyloseq(otu_table(PA, taxa_are_rows= TRUE)) #Transformación de tabla al formato solicitado por phyloseq
+tax_table <- suelo@tax_table #Extracción tax_table
+sam_data <-suelo@sam_data #Extracción de sam_data
+
+#Creación de nuevo proyecto phyloseq
+
+suelo_bin <-merge_phyloseq(otu_table_bin,tax_table,sam_data)
+```
+
+#### Visualización de los datos 
+
+```{r eval=TRUE}
+suelo_bin
+head(otu_table(suelo_bin))
+sample_data(suelo_bin)
+```
+
+#### Adición de nombres a columnas de taxa
+
+```{r eval=TRUE}
+colnames(tax_table(suelo_bin)) <- c("Domain", "Phylum", "Class", "Order", "Family", "Genus", "Species")
+```
+
+#### Cálculo de diversidad alfa
+Este es un cálculo de la abundancia de las OTU's según el tratamiento y el hospedero
+
+```{r eval=TRUE}
+a = plot_bar(suelo_bin,"Treatment", fill="Phylum") + geom_bar (aes(color=Phylum,fill=Phylum),stat = "identity", position = "stack")
+a + facet_wrap("Host")
+```
+
+##### **Figura 1.** Abundancia de OTU's de acuerdo con al tratamiento y el hospedero.
+
+#### Cálculo de índices de diversidad 
+
+```{r eval=TRUE}
+#Cálculo de índices 
+diversity <- estimate_richness(suelo_bin,measures = c("Observed", "Fisher"))
+#Agregar los resultados de índices diversidad a sample_data
+data <- cbind(sample_data(suelo_bin),diversity)
+```
+
+#### Cálculo de anova de dos vías 
+Se realizó un anova de la riqueza observada ("Observed") por hospedero y
+tratamiento (two-way). 
+
+```{r eval=TRUE}
+anova <- aov(Observed ~ Host * Treatment, data= data)
+summary(anova)
+```
+
+#### Cálculo de diversidad beta 
+
+La diversidad beta es representada cómo las muestras están relaciondas las unas con las otras dependiendo del grupo de otus que comparten. Para esto, se realiza una ordinación. Utilizaremos NMDS, una forma de hacer ordinación basado en una matriz de disimilitud. 
+
+```{r eval=TRUE}
+# Matriz de distancia de Raup-Crick 
+RC <- distance(suelo,method = "raup")
+RC
+```
+
+```{r eval=TRUE}
+NMDS = ordinate(suelo_bin, method = "NMDS", distance = RC, color = "Host", shape = "Treatment")
+NMDS
+```
+
+Cuando este análisis es efectivo, el resultado encuentra una solución y posee un estres máximo de 0.15. Por lo tanto, encontramos un buen resultado en este análisis para los datos utilizados. 
+
+```{r eval=TRUE}
+plot_ordination(suelo_bin, NMDS , color = "Host", shape = "Treatment") + geom_point(size=3) +
+  facet_wrap(~Treatment) +
+  theme_bw()
+```
+
+##### **Figura 2** Graficación de la ordinación de las muestras por tratamiento y hospedero. 
+
+
+#### Cálculo de test de adonis
+
+Se realizó un test de adonis de la composición de la comunidad por hospedero y tratamiento para saber si estadísticamente hay diferencia entre las especies.
+
+```{r eval=TRUE}
+#Test por hospedero
+adonis (RC ~ Host, data=data)
+
+#Test por tratamiento
+adonis (RC ~ Treatment, data=data)
+
+#Test por hospedero y tratamiento 
+adonis (RC ~ Host * Treatment, data=data)
+
+```
+
+
+
+
+
